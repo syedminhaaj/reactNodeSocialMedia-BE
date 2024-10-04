@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-
+const { validateToken } = require("../middleware/AuthMiddleware");
 const connection = require("../config/db");
 router.get("/getId/:id", (req, res) => {
   const id = req.params.id;
@@ -13,9 +13,9 @@ router.get("/getId/:id", (req, res) => {
   });
 });
 
-router.post("/", (req, res) => {
-  console.log("req.body", req);
-  const { post_id, comment_desc, username } = req.body;
+router.post("/", validateToken, (req, res) => {
+  const { post_id, comment_desc } = req.body;
+  const username = req.user.username;
   const sql =
     "INSERT INTO comments (post_id, comment_desc,username) VALUES (?, ?,?)";
   connection.query(sql, [post_id, comment_desc, username], (err, result) => {
