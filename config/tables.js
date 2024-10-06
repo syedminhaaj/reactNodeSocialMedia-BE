@@ -43,12 +43,20 @@ const createTables = async () => {
       CONSTRAINT fk_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
     );
   `;
-
+  const createLikesTableQuery = `
+    CREATE TABLE IF NOT EXISTS likes (
+      like_id INT AUTO_INCREMENT PRIMARY KEY,
+      post_id INT NOT NULL,
+      username VARCHAR(100) NOT NULL,
+      CONSTRAINT fk_post_like FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+    );
+  `;
   try {
     // Create users, posts, and comments tables
     await createTable("Users", createUsersTableQuery);
     await createTable("Posts", createPostTableQuery);
     await createTable("Comments", createCommentsTableQuery);
+    await createTable("Likes", createLikesTableQuery);
 
     console.log("All tables created successfully!");
   } catch (err) {

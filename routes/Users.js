@@ -37,7 +37,9 @@ router.post("/login", async (req, res) => {
       { username: username, id: res.id },
       "importantsecret"
     );
-    res.status(201).json(accessToken);
+    res
+      .status(201)
+      .json({ token: accessToken, username: username, id: res.id });
   });
 });
 router.get("/validate", validateToken, (req, res) => {

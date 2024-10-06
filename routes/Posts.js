@@ -4,7 +4,11 @@ const router = express.Router();
 const connection = require("../config/db");
 
 router.get("/", (req, res) => {
-  const sql = "SELECT * FROM posts";
+  //const sql = "SELECT * FROM posts";
+  const sql = `SELECT p.*, (SELECT COUNT(*) FROM likes WHERE likes.post_id = p.id) AS likeCount,
+(SELECT GROUP_CONCAT(username) FROM likes WHERE likes.post_id = p.id) AS likedByUsers
+FROM posts p;
+`;
   connection.query(sql, (err, result) => {
     res
       .status(200)
@@ -57,7 +61,6 @@ router.get("/byId/:id", (req, res) => {
   });
 });
 router.post("/", (req, res) => {
-  console.log("req.body", req);
   const { title, postText, username } = req.body;
   const sql = "INSERT INTO posts (title, postText,username) VALUES (?, ?,?)";
   connection.query(sql, [title, postText, username], (err, result) => {

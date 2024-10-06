@@ -27,4 +27,12 @@ router.post("/", validateToken, (req, res) => {
       .json({ message: "comment created successfully", id: result.insertId });
   });
 });
+
+router.delete("/:commentId", validateToken, (req, res) => {
+  const id = req.params.commentId;
+  const sql = "DELETE FROM comments WHERE comment_id=?";
+  connection.query(sql, [id], (err, result) => {
+    res.status(200).json({ message: "comment deleted successfully" });
+  });
+});
 module.exports = router;
