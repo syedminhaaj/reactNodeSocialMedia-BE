@@ -3,6 +3,12 @@ const router = express.Router();
 
 const connection = require("../config/db");
 
+router.get("/test", (req, res) => {
+  res
+    .status(200)
+    .json({ success: "connected to node server successfully - minhaj" });
+});
+
 router.get("/", (req, res) => {
   //const sql = "SELECT * FROM posts";
   const sql = `SELECT p.*, (SELECT COUNT(*) FROM likes WHERE likes.post_id = p.id) AS likeCount,

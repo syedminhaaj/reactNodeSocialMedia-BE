@@ -16,6 +16,4 @@ app.use("/comment", commentRouter);
 app.use("/auth", usersRouter);
 app.use("/likes", likesRouter);
 
-app.listen(3002, () => {
-  console.log("server is starting on port3002***");
-});
+app.listen(3002, () => {});

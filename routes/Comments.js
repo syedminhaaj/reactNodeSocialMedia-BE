@@ -7,9 +7,7 @@ router.get("/getId/:id", (req, res) => {
   const sql = "SELECT * FROM comments where post_id=?";
 
   connection.query(sql, [id], (err, result) => {
-    res
-      .status(200)
-      .json({ message: "get comments by post id", comments: result });
+    res.status(200).json({ comments: result });
   });
 });
 
