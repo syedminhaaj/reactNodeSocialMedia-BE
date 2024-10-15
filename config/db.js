@@ -11,10 +11,10 @@ const mysql = require("mysql2");
 
 // Below details are for google cloud server details
 const connection = mysql.createConnection({
-  host: "34.171.203.150",
+  host: process.env.DB_HOST,
   port: 3306,
   user: "root",
-  password: "Test@123",
+  password: process.env.DB_PASSWORD,
   database: "reactnodeproject",
 });
 
