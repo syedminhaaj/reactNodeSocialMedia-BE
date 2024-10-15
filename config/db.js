@@ -13,10 +13,12 @@ const mysql = require("mysql2");
 const connection = mysql.createConnection({
   host: process.env.DB_HOST,
   port: 3306,
-  user: "root",
+  user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: "reactnodeproject",
+  database: process.env.DB_NAME,
 });
+//other details
+// 34.171.203.150,3306,root,Test@123,reactnodeproject
 
 // Connect to the database
 connection.connect((err) => {
