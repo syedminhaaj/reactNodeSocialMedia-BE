@@ -24,7 +24,7 @@ router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   const query = `SELECT * FROM users WHERE username = ?`;
   connection.query(query, [username], async (err, queryResults) => {
-    if (queryResults.length === 0) {
+    if (queryResults && queryResults.length === 0) {
       return res.status(500).json({ error: "User not found" });
     }
     const user = queryResults[0];
