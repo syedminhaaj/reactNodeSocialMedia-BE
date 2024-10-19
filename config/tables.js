@@ -16,14 +16,23 @@ const createTable = async (tableName, query) => {
 };
 
 const createTables = async () => {
-  // Queries for creating the tables
   const createUsersTableQuery = `
     CREATE TABLE IF NOT EXISTS users (
       id INT AUTO_INCREMENT PRIMARY KEY,
       username VARCHAR(100) NOT NULL UNIQUE,
-      password VARCHAR(255) NOT NULL
+      email VARCHAR(100) NOT NULL UNIQUE,
+      password VARCHAR(255) NOT NULL,
+      verified boolean DEFAULT false
     )
   `;
+
+  const createUserOTPTableQuery = ` CREATE TABLE IF NOT EXISTS userOtpVerification (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(200) NOT NULL,
+    otp VARCHAR(200) NOT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expiresAt TIMESTAMP NOT NULL
+  )`;
 
   const createPostTableQuery = `
     CREATE TABLE IF NOT EXISTS posts (
@@ -52,11 +61,11 @@ const createTables = async () => {
     );
   `;
   try {
-    // Create users, posts, and comments tables
     await createTable("Users", createUsersTableQuery);
     await createTable("Posts", createPostTableQuery);
     await createTable("Comments", createCommentsTableQuery);
     await createTable("Likes", createLikesTableQuery);
+    await createTable("userOtpVerify", createUserOTPTableQuery);
 
     console.log("All tables created successfully!");
   } catch (err) {
