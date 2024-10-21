@@ -3,7 +3,7 @@ const connection = require("../config/db");
 const bcrypt = require("bcrypt");
 const router = express.Router();
 router.post("/", async (req, res) => {
-  const { email, otp } = req.body;
+  const { email, otp, page } = req.body;
 
   try {
     // Fetch the OTP record for the email from the database
@@ -29,13 +29,13 @@ router.post("/", async (req, res) => {
     }
 
     // OTP is valid, send a success response
-    res.status(200).json({ message: "OTP verified successfully" });
 
     await deleteOTPRecord(email);
-
-    //update the verified true in users table
-    const updateVerifiedQuery = "UPDATE users set verified=? where email=?";
-    await connection.promise().query(updateVerifiedQuery, [1, email]);
+    if (page && page == "registration") {
+      const updateVerifiedQuery = "UPDATE users set verified=? where email=?";
+      await connection.promise().query(updateVerifiedQuery, [1, email]);
+    }
+    res.status(200).json({ page: page, message: "OTP verified successfully" });
   } catch (err) {
     console.error("Error verifying OTP:", err);
     res

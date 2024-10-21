@@ -62,18 +62,19 @@ router.post("/login", async (req, res) => {
       return res.status(500).json({ error: "User not found" });
     }
     const user = queryResults && queryResults[0];
-    const match = await bcrypt.compare(password, user?.password);
-
-    if (!match) {
-      return res.status(500).json({ error: "Incorrect credentials" });
+    if (password && password !== undefined) {
+      const match = await bcrypt.compare(password, user?.password);
+      if (!match) {
+        return res.status(500).json({ error: "Incorrect credentials" });
+      }
+      const accessToken = sign(
+        { username: username, id: res.id },
+        "importantsecret"
+      );
+      res
+        .status(201)
+        .json({ token: accessToken, username: username, id: res.id });
     }
-    const accessToken = sign(
-      { username: username, id: res.id },
-      "importantsecret"
-    );
-    res
-      .status(201)
-      .json({ token: accessToken, username: username, id: res.id });
   });
 });
 router.get("/validate", validateToken, (req, res) => {

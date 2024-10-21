@@ -9,18 +9,18 @@ const generateOTP = () => {
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.MY_EMAIL,
-    pass: process.env.MY_PASSKEY,
+    user: "sdmj730@gmail.com",
+    pass: "kjmx iyhp dbkg xdpp",
   },
 });
 
 // Function to send OTP email
 const sendEmail = async (recipientEmail, otp) => {
   const mailOptions = {
-    from: process.env.MY_EMAIL,
+    from: "sdmj730@gmail.com",
     to: recipientEmail,
     subject: "Your OTP Code",
-    text: `Your OTP code is ${otp}. It will expire in 1 hour.`,
+    text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
   };
   // Send the email
   transporter.sendMail(mailOptions, (error, info) => {
@@ -34,10 +34,17 @@ const sendEmail = async (recipientEmail, otp) => {
 
 const insertOTPRecordInDb = async (email, hashedOTP) => {
   const createdAt = formatDateForDB(new Date());
-  const expiresAt = formatDateForDB(new Date(Date.now() + 60 * 60 * 1000));
-
+  const expiresAt = formatDateForDB(new Date(Date.now() + 10 * 60 * 1000));
+  const deleteOtpQuery = `DELETE FROM userOtpVerification WHERE email = ?`;
+  const selectOtpQuery = `SELECT * FROM userOtpVerification WHERE email = ?`;
   const insertOtpQuery = `INSERT INTO userOtpVerification (email, otp, createdAt, expiresAt) VALUES (?,?,?,?)`;
   try {
+    const [rows] = await connection.promise().query(selectOtpQuery, [email]);
+
+    if (rows.length > 0) {
+      await connection.promise().query(deleteOtpQuery, [email]);
+      console.log("Existing OTP record deleted successfully");
+    }
     await connection
       .promise()
       .query(insertOtpQuery, [email, hashedOTP, createdAt, expiresAt]);
@@ -64,4 +71,5 @@ module.exports = {
   generateOTP,
   sendEmail,
   insertOTPRecordInDb,
+  formatDateForDB,
 };
