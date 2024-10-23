@@ -26,8 +26,8 @@ router.post("/", validateToken, (req, res) => {
         }
 
         // After removing the like, get the updated total like count
-        const countLikesSql =
-          "SELECT COUNT(*) AS totalLikeCount FROM likes WHERE post_id = ?";
+        const countLikesSql = `SELECT COUNT(*) AS totalLikeCount, GROUP_CONCAT(username) AS likedUsers 
+                                FROM likes WHERE post_id = ?`;
         connection.query(countLikesSql, [postId], (err, countResult) => {
           if (err) {
             return res
@@ -36,13 +36,15 @@ router.post("/", validateToken, (req, res) => {
           }
 
           const totalLikeCount = countResult[0].totalLikeCount;
+          const likedUsers = countResult[0].likedUsers
+            ? countResult[0].likedUsers
+            : "";
           return res
-            .status(200)
-            .json({ message: "Disliked the post", totalLikeCount });
+            .status(201)
+            .json({ message: "disliked", totalLikeCount, likedUsers });
         });
       });
     } else {
-      // If the user has not liked the post, insert a new like
       const insertLikeSql =
         "INSERT INTO likes (post_id, username) VALUES (?, ?)";
       connection.query(insertLikeSql, [postId, username], (err, result) => {
@@ -53,8 +55,8 @@ router.post("/", validateToken, (req, res) => {
         }
 
         // After inserting the like, get the updated total like count
-        const countLikesSql =
-          "SELECT COUNT(*) AS totalLikeCount FROM likes WHERE post_id = ?";
+        const countLikesSql = `SELECT COUNT(*) AS totalLikeCount, GROUP_CONCAT(username) AS likedUsers 
+                                FROM likes WHERE post_id = ?`;
         connection.query(countLikesSql, [postId], (err, countResult) => {
           if (err) {
             return res
@@ -63,9 +65,12 @@ router.post("/", validateToken, (req, res) => {
           }
 
           const totalLikeCount = countResult[0].totalLikeCount;
+          const likedUsers = countResult[0].likedUsers
+            ? countResult[0].likedUsers
+            : "";
           return res
             .status(201)
-            .json({ message: "Liked the post", totalLikeCount });
+            .json({ message: "Liked the post", totalLikeCount, likedUsers });
         });
       });
     }
