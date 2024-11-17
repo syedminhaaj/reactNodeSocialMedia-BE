@@ -4,7 +4,6 @@ const connection = require("../config/db");
 const bcrypt = require("bcrypt");
 const { sendEmail, insertOTPRecordInDb } = require("./SendOtpEmail");
 router.post("/", (req, res) => {
-  console.log("am i hitting forgot password");
   const { email } = req.body;
 
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -43,7 +42,6 @@ router.post("/resetpassword", async (req, res) => {
 
     // Hash the new password
     const hashedPassword = await bcrypt.hash(password, 10);
-
     // Update username and password for the provided email
     const updateUserQuery =
       "UPDATE users SET username = ?, password = ? WHERE email = ?";

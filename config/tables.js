@@ -39,7 +39,8 @@ const createTables = async () => {
       id INT AUTO_INCREMENT PRIMARY KEY,
       title VARCHAR(100) NOT NULL,
       postText VARCHAR(200) NOT NULL,
-      username VARCHAR(100) NOT NULL
+      username VARCHAR(100) NOT NULL,
+      postImageUrl VARCHAR(300)
     )
   `;
 
