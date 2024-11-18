@@ -4,7 +4,18 @@ const { validateToken } = require("../middleware/AuthMiddleware");
 const connection = require("../config/db");
 router.get("/getId/:id", (req, res) => {
   const id = req.params.id;
-  const sql = "SELECT * FROM comments where post_id=?";
+  const sql = `
+    SELECT 
+      comments.comment_desc, 
+      comments.post_id, 
+      users.username, 
+      users.profilePicUrl 
+    FROM 
+      comments 
+      LEFT JOIN 
+      users ON comments.username = users.username 
+    WHERE 
+      comments.post_id = ?`;
 
   connection.query(sql, [id], (err, result) => {
     res.status(200).json({ comments: result });

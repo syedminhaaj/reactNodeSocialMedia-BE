@@ -4,15 +4,27 @@ const router = express.Router();
 const connection = require("../config/db");
 
 router.get("/", (req, res) => {
-  //const sql = "SELECT * FROM posts";
-  const sql = `SELECT p.*, (SELECT COUNT(*) FROM likes WHERE likes.post_id = p.id) AS likeCount,
-(SELECT GROUP_CONCAT(username) FROM likes WHERE likes.post_id = p.id) AS likedByUsers
-FROM posts p;
-`;
+  const sql = `
+    SELECT 
+      p.*, 
+      u.profilePicUrl,
+      (SELECT COUNT(*) FROM likes WHERE likes.post_id = p.id) AS likeCount,
+      (SELECT GROUP_CONCAT(username) FROM likes WHERE likes.post_id = p.id) AS likedByUsers
+    FROM 
+      posts p
+      LEFT JOIN 
+      users u ON p.username = u.username;
+  `;
+
   connection.query(sql, (err, result) => {
+    if (err) {
+      console.error("Error fetching posts:", err);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+
     res
       .status(200)
-      .json({ message: "Post created successfully", post: result });
+      .json({ message: "Posts retrieved successfully", posts: result });
   });
 });
 
