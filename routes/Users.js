@@ -10,7 +10,7 @@ const { sign } = require("jsonwebtoken");
 const connection = require("../config/db");
 const { validateToken } = require("../middleware/AuthMiddleware");
 router.post("/", (req, res) => {
-  const { username, password, email } = req.body;
+  const { username, password, email, profilePicUrl } = req.body;
 
   // First, check if the email already exists
   const checkEmailQuery = "SELECT * FROM users WHERE email = ?";
@@ -29,10 +29,10 @@ router.post("/", (req, res) => {
     // If the email doesn't exist, proceed to insert the user
     bcrypt.hash(password, 10).then((hash) => {
       const insertUserQuery =
-        "INSERT INTO users (username, email, password) VALUES (?,?,?)";
+        "INSERT INTO users (username, email, password, profilePicUrl) VALUES (?,?,?,?)";
       connection.query(
         insertUserQuery,
-        [username, email, hash],
+        [username, email, hash, profilePicUrl],
         async (err, result) => {
           if (err) {
             console.error("Error inserting data into database:", err);
@@ -74,7 +74,12 @@ router.post("/login", async (req, res) => {
       );
       res
         .status(201)
-        .json({ token: accessToken, username: username, id: res.id });
+        .json({
+          token: accessToken,
+          username: username,
+          id: res.id,
+          email: user.email,
+        });
     }
   });
 });
