@@ -1,96 +1,106 @@
 const express = require("express");
 const router = express.Router();
+const admin = require("firebase-admin");
 
-const connection = require("../config/db");
+const db = admin.firestore();
 
-router.get("/", (req, res) => {
-  const sql = `
-    SELECT 
-      p.*, 
-      u.profilePicUrl,
-      (SELECT COUNT(*) FROM likes WHERE likes.post_id = p.id) AS likeCount,
-      (SELECT GROUP_CONCAT(username) FROM likes WHERE likes.post_id = p.id) AS likedByUsers
-    FROM 
-      posts p
-      LEFT JOIN 
-      users u ON p.username = u.username;
-  `;
+// Fetch all posts along with like count and users who liked the post
+router.get("/", async (req, res) => {
+  try {
+    const postsSnapshot = await db.collection("posts").get();
+    const posts = [];
 
-  connection.query(sql, (err, result) => {
-    if (err) {
-      console.error("Error fetching posts:", err);
-      return res.status(500).json({ message: "Internal server error" });
+    for (const postDoc of postsSnapshot.docs) {
+      const postData = postDoc.data();
+      const likesSnapshot = await db
+        .collection("likes")
+        .where("post_id", "==", postDoc.id)
+        .get();
+
+      const likeCount = likesSnapshot.size;
+      const likedByUsers = likesSnapshot.docs.map(
+        (likeDoc) => likeDoc.data().username
+      );
+
+      const userDoc = await db.collection("users").doc(postData.username).get();
+      const profilePicUrl = userDoc.exists
+        ? userDoc.data().profilePicUrl
+        : null;
+
+      posts.push({
+        id: postDoc.id,
+        ...postData,
+        likeCount,
+        likedByUsers,
+        profilePicUrl,
+      });
     }
 
-    res
-      .status(200)
-      .json({ message: "Posts retrieved successfully", posts: result });
-  });
+    res.status(200).json({ message: "Posts retrieved successfully", posts });
+  } catch (err) {
+    console.error("Error fetching posts:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
-router.get("/byId/:id", (req, res) => {
+// Fetch a post by ID along with its comments
+router.get("/byId/:id", async (req, res) => {
   const id = req.params.id;
 
-  const sql = `
-    SELECT 
-        p.id AS post_id,
-        p.title,
-        p.postText,
-        p.username AS post_username,
-        c.comment_id,
-        c.comment_desc,
-        c.username AS comment_username,
-        c.created_at
-    FROM 
-        posts p
-    LEFT JOIN 
-        comments c ON p.id = c.post_id
-    WHERE 
-        p.id = ?;
-  `;
+  try {
+    const postDoc = await db.collection("posts").doc(id).get();
 
-  connection.query(sql, [id], (err, result) => {
-    if (err) {
-      return res.status(500).json({ message: "Database error", error: err });
+    if (!postDoc.exists) {
+      return res.status(404).json({ message: "Post not found" });
     }
+
+    const postData = postDoc.data();
+
+    const commentsSnapshot = await db
+      .collection("comments")
+      .where("post_id", "==", id)
+      .get();
+
+    const comments = commentsSnapshot.docs.map((commentDoc) => ({
+      commentId: commentDoc.id,
+      ...commentDoc.data(),
+    }));
 
     const post = {
-      postId: result[0]?.post_id,
-      title: result[0]?.title,
-      postText: result[0]?.postText,
-      username: result[0]?.post_username,
-      postImageUrl: result[0].postImageUrl,
-      comments: result
-        .map((comment) => ({
-          commentId: comment.comment_id,
-          commentDesc: comment.comment_desc,
-          commentUsername: comment.comment_username,
-          createdAt: comment.created_at,
-        }))
-        .filter((comment) => comment.commentId !== null),
+      postId: postDoc.id,
+      ...postData,
+      comments,
     };
 
-    res.status(200).json({ message: "Comments fetched successfully", post });
-  });
+    res.status(200).json({ message: "Post retrieved successfully", post });
+  } catch (err) {
+    console.error("Error fetching post by ID:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
-router.post("/", (req, res) => {
-  const { title, postText, username, postImageUrl } = req.body;
-  const sql =
-    "INSERT INTO posts (title, postText,username,postImageUrl) VALUES (?, ?,?,?)";
-  connection.query(
-    sql,
-    [title, postText, username, postImageUrl],
-    (err, result) => {
-      if (err) {
-        console.error("Error inserting data into database:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
 
-      res
-        .status(201)
-        .json({ message: "Post created successfully", id: result.insertId });
-    }
-  );
+// Create a new post
+router.post("/", async (req, res) => {
+  const { title, postText, username, postImageUrl } = req.body;
+
+  try {
+    const newPost = {
+      title,
+      postText,
+      username,
+      postImageUrl: postImageUrl || null,
+      createdAt: admin.firestore.Timestamp.now(),
+    };
+
+    const postRef = await db.collection("posts").add(newPost);
+
+    res
+      .status(201)
+      .json({ message: "Post created successfully", id: postRef.id });
+  } catch (err) {
+    console.error("Error creating a new post:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 module.exports = router;

@@ -1,89 +1,116 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
-const {
-  sendEmail,
-  generateOTP,
-  insertOTPRecordInDb,
-} = require("./SendOtpEmail");
+const admin = require("firebase-admin");
+const { sendEmail, generateOTP } = require("./SendOtpEmail");
 const { sign } = require("jsonwebtoken");
-const connection = require("../config/db");
 const { validateToken } = require("../middleware/AuthMiddleware");
-router.post("/", (req, res) => {
+
+// Firestore reference
+const db = admin.firestore();
+
+// User registration route
+router.post("/", async (req, res) => {
   const { username, password, email, profilePicUrl } = req.body;
 
-  // First, check if the email already exists
-  const checkEmailQuery = "SELECT * FROM users WHERE email = ?";
-  connection.query(checkEmailQuery, [email], (err, result) => {
-    if (err) {
-      console.error("Error checking email in database:", err);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    if (result.length > 0) {
+  try {
+    // Check if email already exists
+    const userDoc = await db.collection("users").doc(email).get();
+    if (userDoc.exists) {
       return res
         .status(409)
         .json({ message: "Email or username already exists" });
     }
 
-    // If the email doesn't exist, proceed to insert the user
-    bcrypt.hash(password, 10).then((hash) => {
-      const insertUserQuery =
-        "INSERT INTO users (username, email, password, profilePicUrl) VALUES (?,?,?,?)";
-      connection.query(
-        insertUserQuery,
-        [username, email, hash, profilePicUrl],
-        async (err, result) => {
-          if (err) {
-            console.error("Error inserting data into database:", err);
-            return res.status(500).json({ error: "Database error" });
-          }
-          const otp = generateOTP();
-          sendEmail(email, otp);
-          const saltCounts = 10;
-          const hashedOTP = await bcrypt.hash(otp, saltCounts);
-          insertOTPRecordInDb(email, hashedOTP);
-          res.status(201).json({
-            message: "OTP sent successfully",
-            email: email,
-            id: result.insertId,
-          });
-        }
-      );
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Add user to Firestore
+    await db
+      .collection("users")
+      .doc(email)
+      .set({
+        username,
+        email,
+        password: hashedPassword,
+        profilePicUrl: profilePicUrl || "",
+        verified: false, // User is not verified initially
+      });
+
+    // Generate OTP
+    const otp = generateOTP();
+    await sendEmail(email, otp);
+
+    // Hash the OTP
+    const hashedOTP = await bcrypt.hash(otp, 10);
+
+    // Store OTP in Firestore with an expiration time
+    await db
+      .collection("userOtpVerification")
+      .doc(email)
+      .set({
+        otp: hashedOTP,
+        createdAt: admin.firestore.Timestamp.now(),
+        expiresAt: admin.firestore.Timestamp.fromDate(
+          new Date(Date.now() + 10 * 60 * 1000) // 10 minutes from now
+        ),
+      });
+
+    res.status(201).json({
+      message: "OTP sent successfully",
+      email,
     });
-  });
+  } catch (err) {
+    console.error("Error registering user:", err);
+    res.status(500).json({ error: "An error occurred while registering user" });
+  }
 });
 
+// User login route
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
-  const query = `SELECT * FROM users WHERE username = ?`;
-  connection.query(query, [username], async (err, queryResults) => {
-    if (queryResults && queryResults.length === 0) {
-      return res.status(500).json({ error: "User not found" });
-    }
-    const user = queryResults && queryResults[0];
 
-    if (password && user) {
-      const match = await bcrypt.compare(password, user?.password);
-      if (!match) {
-        return res.status(500).json({ error: "Incorrect credentials" });
-      }
-      const accessToken = sign(
-        { username: username, id: res.id },
-        "importantsecret"
-      );
-      res
-        .status(201)
-        .json({
-          token: accessToken,
-          username: username,
-          id: res.id,
-          email: user.email,
-        });
+  try {
+    // Query Firestore to find the user by username
+    const userQuery = await db
+      .collection("users")
+      .where("username", "==", username)
+      .get();
+
+    if (userQuery.empty) {
+      return res.status(404).json({ error: "User not found" });
     }
-  });
+
+    const userDoc = userQuery.docs[0];
+    const user = userDoc.data();
+
+    // Compare the provided password with the stored hash
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ error: "Incorrect credentials" });
+    }
+
+    // Generate a JWT token
+    const accessToken = sign(
+      { username: user.username, id: userDoc.id },
+      "importantsecret"
+    );
+
+    res.status(200).json({
+      token: accessToken,
+      username: user.username,
+      id: userDoc.id,
+      email: user.email,
+    });
+  } catch (err) {
+    console.error("Error during login:", err);
+    res.status(500).json({ error: "An error occurred while logging in" });
+  }
 });
+
+// Validate token route
 router.get("/validate", validateToken, (req, res) => {
-  res.json({ message: "valid user.Authenticated" });
+  res.json({ message: "Valid user. Authenticated" });
 });
+
 module.exports = router;

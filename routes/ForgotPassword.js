@@ -1,60 +1,73 @@
 const express = require("express");
 const router = express.Router();
-const connection = require("../config/db");
-const bcrypt = require("bcrypt");
-const { sendEmail, insertOTPRecordInDb } = require("./SendOtpEmail");
-router.post("/", (req, res) => {
+const firebaseAdmin = require("firebase-admin");
+const { sendEmail, insertOTPRecordInDb } = require("./SendOtpEmail"); // You can modify this if you want to use Firebase's email service.
+
+router.post("/", async (req, res) => {
   const { email } = req.body;
 
+  // Generate OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  connection.query(
-    "SELECT * FROM users WHERE email = ?",
-    [email],
-    async (err, result) => {
-      console.log("err --->", err);
-      if (err) return res.status(500).send("Database error");
-      if (result.length === 0) return res.status(404).send("Email not found");
+  try {
+    // Check if the user exists in Firebase Auth
+    const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
 
-      await sendEmail(email, otp);
-      const salt = 11;
-      const hashedOTP = await bcrypt.hash(otp, salt);
-      insertOTPRecordInDb(email, hashedOTP);
-      res.status(201).json({
-        message: "OTP sent successfully",
-        email: email,
-        id: result.insertId,
-      });
+    // Send OTP email using the existing sendEmail function (modify to use Firebase Email Service if needed)
+    await sendEmail(email, otp);
+
+    // Store the OTP in Firestore or Firebase Realtime Database
+    const otpRef = firebaseAdmin
+      .firestore()
+      .collection("otpRecords")
+      .doc(email);
+    await otpRef.set({
+      otp: otp,
+      createdAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.status(201).json({
+      message: "OTP sent successfully",
+      email: email,
+      id: userRecord.uid,
+    });
+  } catch (err) {
+    console.error("Error handling OTP:", err);
+    if (err.code === "auth/user-not-found") {
+      return res.status(404).send("Email not found");
     }
-  );
+    res.status(500).send("Internal server error");
+  }
 });
+
 router.post("/resetpassword", async (req, res) => {
   const { email, username, password } = req.body;
 
   try {
-    // Check if email exists
-    const checkEmailQuery = "SELECT * FROM users WHERE email = ?";
-    const [result] = await connection.promise().query(checkEmailQuery, [email]);
+    // Check if email exists in Firebase Auth
+    const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
 
-    if (result.length === 0) {
-      return res.status(404).json({ message: "Email not found" });
-    }
+    // Update username and password for the provided email in Firestore or Realtime Database
+    const hashedPassword = await firebaseAdmin
+      .auth()
+      .createCustomToken(email, { password });
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    // Update username and password for the provided email
-    const updateUserQuery =
-      "UPDATE users SET username = ?, password = ? WHERE email = ?";
-    await connection
-      .promise()
-      .query(updateUserQuery, [username, hashedPassword, email]);
+    await firebaseAdmin.auth().updateUser(userRecord.uid, {
+      email: email,
+      password: hashedPassword, // Use Firebase method to handle password update
+      displayName: username, // Update username (if needed)
+    });
 
-    res
-      .status(200)
-      .json({ message: "Username and password updated successfully" });
+    res.status(200).json({
+      message: "Username and password updated successfully",
+    });
   } catch (err) {
     console.error("Error resetting password:", err);
+    if (err.code === "auth/user-not-found") {
+      return res.status(404).json({ message: "Email not found" });
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 module.exports = router;

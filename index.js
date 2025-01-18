@@ -1,8 +1,21 @@
 const express = require("express");
-const connection = require("./config/tables");
+//  NOT USING MYSQL CONNECTION SWITCHED TO FIREBASE CONNECTION DB,
+// REPLACED TABLE.JS TO FIREBASE DB CONFIGURATION - 18 JAN 2025
+//const connection = require("./config/tables");
 
 const app = express();
 const cors = require("cors");
+const { setupFirestore } = require("./config/firebase-tables");
+
+const startApp = async () => {
+  console.log("Initializing Firestore setup...");
+  await setupFirestore();
+  console.log("Application started successfully!");
+};
+
+startApp().catch((err) => {
+  console.error("Error starting application:", err);
+});
 
 //routes
 const postRouter = require("./routes/Posts");

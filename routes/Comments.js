@@ -1,47 +1,76 @@
 const express = require("express");
 const router = express.Router();
+const firebaseAdmin = require("firebase-admin");
 const { validateToken } = require("../middleware/AuthMiddleware");
-const connection = require("../config/db");
-router.get("/getId/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = `
-    SELECT 
-      comments.comment_desc, 
-      comments.post_id, 
-      users.username, 
-      users.profilePicUrl 
-    FROM 
-      comments 
-      LEFT JOIN 
-      users ON comments.username = users.username 
-    WHERE 
-      comments.post_id = ?`;
 
-  connection.query(sql, [id], (err, result) => {
-    res.status(200).json({ comments: result });
-  });
+// Get comments for a specific post
+router.get("/getId/:id", async (req, res) => {
+  const postId = req.params.id;
+
+  try {
+    // Fetch comments for a specific post
+    const commentsSnapshot = await firebaseAdmin
+      .firestore()
+      .collection("comments")
+      .where("post_id", "==", postId)
+      .get();
+
+    const comments = commentsSnapshot.docs.map((doc) => ({
+      ...doc.data(),
+      id: doc.id,
+    }));
+
+    res.status(200).json({ comments });
+  } catch (err) {
+    console.error("Error fetching comments:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
-router.post("/", validateToken, (req, res) => {
+// Create a new comment
+router.post("/", validateToken, async (req, res) => {
   const { post_id, comment_desc } = req.body;
-  const username = req.user.username;
-  const sql =
-    "INSERT INTO comments (post_id, comment_desc,username) VALUES (?, ?,?)";
-  connection.query(sql, [post_id, comment_desc, username], (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: "Database error" });
-    }
-    res
-      .status(201)
-      .json({ message: "comment created successfully", id: result.insertId });
-  });
+  const username = req.user.username; // The username from the validated token
+
+  try {
+    // Add a new comment to Firestore
+    const commentRef = await firebaseAdmin
+      .firestore()
+      .collection("comments")
+      .add({
+        post_id,
+        comment_desc,
+        username,
+        createdAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    res.status(201).json({
+      message: "Comment created successfully",
+      id: commentRef.id,
+    });
+  } catch (err) {
+    console.error("Error creating comment:", err);
+    res.status(500).json({ error: "Database error" });
+  }
 });
 
-router.delete("/:commentId", validateToken, (req, res) => {
-  const id = req.params.commentId;
-  const sql = "DELETE FROM comments WHERE comment_id=?";
-  connection.query(sql, [id], (err, result) => {
-    res.status(200).json({ message: "comment deleted successfully" });
-  });
+// Delete a comment
+router.delete("/:commentId", validateToken, async (req, res) => {
+  const commentId = req.params.commentId;
+
+  try {
+    // Delete comment from Firestore
+    await firebaseAdmin
+      .firestore()
+      .collection("comments")
+      .doc(commentId)
+      .delete();
+
+    res.status(200).json({ message: "Comment deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting comment:", err);
+    res.status(500).json({ error: "Database error" });
+  }
 });
+
 module.exports = router;

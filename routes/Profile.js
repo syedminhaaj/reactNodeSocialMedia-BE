@@ -1,37 +1,43 @@
 const express = require("express");
 const router = express.Router();
-const connection = require("../config/db");
-router.put("/", (req, res) => {
+const admin = require("firebase-admin");
+
+// Firestore reference
+const db = admin.firestore();
+
+// Route to update user profile
+router.put("/", async (req, res) => {
   const { email, newUsername, profilePicUrl } = req.body;
 
   if (!email || !newUsername) {
     return res
       .status(400)
-      .json({ message: "User Email and new username are required." });
+      .json({ message: "User email and new username are required." });
   }
-  const query = `
-      UPDATE users
-      SET username = ?, profilePicUrl = ?
-      WHERE email = ?;
-    `;
 
-  connection.query(
-    query,
-    [newUsername, profilePicUrl, email],
-    (error, results) => {
-      if (error) {
-        return res.status(500).json({ message: "Internal server error." });
-      }
-      console.log("Results:", results);
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ message: "User not found." });
-      }
+  try {
+    // Reference to the user document in Firestore
+    const userRef = db.collection("users").doc(email);
 
-      res.status(200).json({
-        message: "Profile updated successfully.",
-      });
+    // Check if the user exists
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: "User not found." });
     }
-  );
+
+    // Update the user's profile
+    await userRef.update({
+      username: newUsername,
+      profilePicUrl: profilePicUrl || null,
+    });
+
+    res.status(200).json({
+      message: "Profile updated successfully.",
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
 });
 
 module.exports = router;

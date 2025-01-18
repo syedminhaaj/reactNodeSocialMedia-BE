@@ -1,80 +1,63 @@
 const express = require("express");
 const router = express.Router();
 const { validateToken } = require("../middleware/AuthMiddleware");
-const connection = require("../config/db");
-router.post("/", validateToken, (req, res) => {
+const admin = require("firebase-admin");
+
+// Firestore reference
+const db = admin.firestore();
+
+router.post("/", validateToken, async (req, res) => {
   const { postId, username } = req.body;
 
-  // Check if the user has already liked the post
-  const checkLikeSql = "SELECT * FROM likes WHERE post_id = ? AND username = ?";
-  connection.query(checkLikeSql, [postId, username], (err, results) => {
-    if (err) {
-      return res
-        .status(500)
-        .json({ error: "Database error while checking likes" });
-    }
+  if (!postId || !username) {
+    return res
+      .status(400)
+      .json({ message: "postId and username are required." });
+  }
 
-    if (results.length > 0) {
+  try {
+    // Reference to the likes collection for the specific post
+    const likesRef = db.collection("posts").doc(postId).collection("likes");
+    const likeDoc = likesRef.doc(username);
+
+    // Check if the user has already liked the post
+    const likeSnapshot = await likeDoc.get();
+
+    if (likeSnapshot.exists) {
       // If user already liked the post, remove the like (dislike action)
-      const deleteLikeSql =
-        "DELETE FROM likes WHERE post_id = ? AND username = ?";
-      connection.query(deleteLikeSql, [postId, username], (err, result) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ error: "Database error while removing like" });
-        }
+      await likeDoc.delete();
 
-        // After removing the like, get the updated total like count
-        const countLikesSql = `SELECT COUNT(*) AS totalLikeCount, GROUP_CONCAT(username) AS likedUsers 
-                                FROM likes WHERE post_id = ?`;
-        connection.query(countLikesSql, [postId], (err, countResult) => {
-          if (err) {
-            return res
-              .status(500)
-              .json({ error: "Database error while counting likes" });
-          }
+      // Get updated like count and liked users
+      const updatedLikesSnapshot = await likesRef.get();
+      const totalLikeCount = updatedLikesSnapshot.size;
+      const likedUsers = updatedLikesSnapshot.docs.map((doc) => doc.id);
 
-          const totalLikeCount = countResult[0].totalLikeCount;
-          const likedUsers = countResult[0].likedUsers
-            ? countResult[0].likedUsers
-            : "";
-          return res
-            .status(201)
-            .json({ message: "disliked", totalLikeCount, likedUsers });
-        });
+      return res.status(201).json({
+        message: "Disliked the post",
+        totalLikeCount,
+        likedUsers,
       });
     } else {
-      const insertLikeSql =
-        "INSERT INTO likes (post_id, username) VALUES (?, ?)";
-      connection.query(insertLikeSql, [postId, username], (err, result) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ error: "Database error while liking the post" });
-        }
+      // Add a new like
+      await likeDoc.set({ username });
 
-        // After inserting the like, get the updated total like count
-        const countLikesSql = `SELECT COUNT(*) AS totalLikeCount, GROUP_CONCAT(username) AS likedUsers 
-                                FROM likes WHERE post_id = ?`;
-        connection.query(countLikesSql, [postId], (err, countResult) => {
-          if (err) {
-            return res
-              .status(500)
-              .json({ error: "Database error while counting likes" });
-          }
+      // Get updated like count and liked users
+      const updatedLikesSnapshot = await likesRef.get();
+      const totalLikeCount = updatedLikesSnapshot.size;
+      const likedUsers = updatedLikesSnapshot.docs.map((doc) => doc.id);
 
-          const totalLikeCount = countResult[0].totalLikeCount;
-          const likedUsers = countResult[0].likedUsers
-            ? countResult[0].likedUsers
-            : "";
-          return res
-            .status(201)
-            .json({ message: "Liked the post", totalLikeCount, likedUsers });
-        });
+      return res.status(201).json({
+        message: "Liked the post",
+        totalLikeCount,
+        likedUsers,
       });
     }
-  });
+  } catch (error) {
+    console.error("Error processing like action:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while processing the like action" });
+  }
 });
 
 module.exports = router;
