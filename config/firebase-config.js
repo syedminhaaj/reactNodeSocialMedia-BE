@@ -2,7 +2,7 @@ const config = {
   type: process.env.type,
   project_id: process.env.project_id,
   private_key_id: process.env.private_key_id,
-  private_key: process.env.private_key,
+  private_key: MyKey,
   client_email: process.env.client_email,
   client_id: process.env.client_id,
   auth_uri: process.env.auth_uri,
@@ -13,3 +13,6 @@ const config = {
 };
 
 module.exports = config;
+
+const MyKey =
+  "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCtlrKsQAFH0XrD\n/zwYKDeRsPw5n8dZ+2KWqgSIa66kmFK7cOsZpgkstWLBUUmuKhZCQ/YW2afXdIK8\nj8KpDeBMYOqDC7waqdBAIRSATR0+ROeGloqFd2cFlWukurE3GuLbQ+C5GIS1B2VV\nME8JkRdyPkD2atg5PXDcTlzoHXtsToCA6iD4vwJ6HiOqMBvCgEdP2+fNbMV6AXgE\n+6pCNWRxhSQImxskQ7lhakBHzE62rKWrdm2aqTzTcGpommE/fOPs8nCGn3fNYNXN\nP0nlnAMndrS94ZOST4gU0mY30dPnn03XeC6EVYoNjkGeSAARRP0xPhoUyXQgfzt+\neU8RKZKnAgMBAAECggEAMT9cx3ONKXPr0Wk7Alt+kG3W0P5cj1G7gaUQjieGr5mr\ndxQtDuTFG5MGRnQqZCf6kqg3S/pKHN0oLhjXECEormKchbsxjZr5wwffihrWnhDs\nYomZGQ5sAvCGToDMwCZ3j99tBPZIyBcmD4oaEkvAjB/PTFm5qFufBlGRGCUtG+ed\n0FeUjFyGDdkrTZKSHB/XzV/jdbu58HKM//3ttcJhxsJgRa/ZLIhbJvHzlh8A6jf4\nu/awOsnu8IZdRcgKDWuRtJQW7an14WAFH0vHHgM1Rq9wh9KaLbTQg+RFZdhA7quG\nDuYuldYCNNX1K5HFA0jXF073zzcqIuUiizis/Wco4QKBgQDesEpSWNeUPPKK2/l1\n/g0MCLv8NpvxNuOITOxRF61y9BHbTDIi5d98Bq9Fq/8ZmIc1D1mg1CM2OFCLaJ5c\nZsgrhdUSNDll951CWiAZash7RJu98Ftai7Dk1GXGQhdHuHq9qJhYc4qzxNIkU/gs\nieGCD5oyrTTIpJLI38v5NxZ8UQKBgQDHjihdp2SmiKIPXuVZIqthia+8XjJUS1D4\ndF/YAcnVI3Td+SRLMcWvPotqMEKx1LS7B7VeCqmGaezOWgbl/5uFosbohVugJJOy\nFJ2J0EGQz0e/OqOJQFoDB73pKoI1nzMJq+5zqTdxf/xtdSyjsiftMEoMW2jd9YK2\nYlOBhlv5dwKBgHYjcEpfd37dFo80RBOkw6cuuwwCrJg7Vlpo9LXQqePiN9bvhWme\nKgHSSgncRWl+0bwEeLgp0sRg+9n5lonOvULZrUALFKhTxMn+pijVzaYXr8gES3Kt\nyRqc06FqTo9t/y++0ZObOGpGcHV1VqPKQiiNvnBEE0yegoCuubds0jEBAoGALBWd\nmUL3m0qn8plWNWDRV5ThO83bdH/G/XxICCItAmb41GjLucjfER3SEr1inoKNApxr\nVsEoPkd8RwHgcEMNinIxWwDLAw/RiQ/A1ccqFOGVygscQZ/zwqOdMrtvVIU88zAG\nV4rUcsCBdXTjTa5335BBa4VuH0qze7MxG3YhL3UCgYEAii/05pfUuCg3LsI0I+zL\nQ628eFU/pwBhOm9/QEsdYWfPP3QMCQDWKodTRnRVdwof1pgb5MnNy3dJPFQNMnhd\nVVvhMY6Yxy3P32g1Z9B1Vlk4+CX1cNNolFWLI9RViJyMdaDs53SrGhiemIBeZX1E\nwg9ElPALJsM+EmwiUqcpVL4=\n-----END PRIVATE KEY-----\n";
